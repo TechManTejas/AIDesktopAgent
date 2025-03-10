@@ -1,23 +1,25 @@
 import gradio as gr
 from langchain_core.messages import HumanMessage, AIMessage
 from agent import graph
-
-
+import json
+import re
 
 def parse_function_call(output: str):
-    # Example: <function=run_shell_command {"command": "whoami"}>
-    func_name = None
-    payload = {}
-    if output.startswith("<function="):
-        end_func = output.find(" ")
-        func_name = output[10:end_func]
-        json_str = output[end_func:].trip(" {}>")
-        import json
+    # Define regex pattern to capture function name and JSON payload
+    match = re.search(r'<function[=./(]([a-zA-Z0-9_]+)[)>]?({.*})', output)
+    
+    if match:
+        func_name = match.group(1)
+        json_str = match.group(2)
+        
         try:
             payload = json.loads(json_str)
-        except Exception:
-            pass
-    return func_name, payload
+        except json.JSONDecodeError:
+            payload = {}
+        
+        return func_name, payload
+    
+    return None, {}
 
 async def predict(message, history, state):
     config = state
@@ -33,7 +35,7 @@ async def predict(message, history, state):
     }, config=config)
 
     output = gpt_response['messages'][-1].content
-    if output.startswith("<function="):
+    if output.startswith("<function"):
         func_name, payload = parse_function_call(output)
         if func_name == "run_shell_command":
             cmd = payload.get("command")

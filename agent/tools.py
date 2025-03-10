@@ -11,8 +11,8 @@ import subprocess
 
 
 async def run_shell_command(command: str) -> str:
-
     """ Execute a shell command in local host and return its output """
+    print(command)
     try:
         # Execute the command and capture the output
         result = subprocess.run(command, shell=True, check=True, text=True, capture_output=True)
